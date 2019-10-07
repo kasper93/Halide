@@ -601,15 +601,15 @@ void CodeGen_Hexagon::init_module() {
 
         // Shifts
         // We map arithmetic and logical shifts to just "shr", depending on type.
-        {IPICK(is_128B, Intrinsic::hexagon_V6_vlsrhv), u16v1, "shr.vuh.vuh", {u16v1, u16v1}},
-        {IPICK(is_128B, Intrinsic::hexagon_V6_vlsrwv), u32v1, "shr.vuw.vuw", {u32v1, u32v1}},
-        {IPICK(is_128B, Intrinsic::hexagon_V6_vasrhv), i16v1, "shr.vh.vuh", {i16v1, u16v1}},
-        {IPICK(is_128B, Intrinsic::hexagon_V6_vasrwv), i32v1, "shr.vw.vuw", {i32v1, u32v1}},
+        {IPICK(is_128B, Intrinsic::hexagon_V6_vlsrhv), u16v1, "shr.vuh.vuh", {u16v1, i16v1}},
+        {IPICK(is_128B, Intrinsic::hexagon_V6_vlsrwv), u32v1, "shr.vuw.vuw", {u32v1, i32v1}},
+        {IPICK(is_128B, Intrinsic::hexagon_V6_vasrhv), i16v1, "shr.vh.vuh", {i16v1, i16v1}},
+        {IPICK(is_128B, Intrinsic::hexagon_V6_vasrwv), i32v1, "shr.vw.vuw", {i32v1, i32v1}},
 
-        {IPICK(is_128B, Intrinsic::hexagon_V6_vaslhv), u16v1, "shl.vuh.vuh", {u16v1, u16v1}},
-        {IPICK(is_128B, Intrinsic::hexagon_V6_vaslwv), u32v1, "shl.vuw.vuw", {u32v1, u32v1}},
-        {IPICK(is_128B, Intrinsic::hexagon_V6_vaslhv), i16v1, "shl.vh.vuh", {i16v1, u16v1}},
-        {IPICK(is_128B, Intrinsic::hexagon_V6_vaslwv), i32v1, "shl.vw.vuw", {i32v1, u32v1}},
+        {IPICK(is_128B, Intrinsic::hexagon_V6_vaslhv), u16v1, "shl.vuh.vuh", {u16v1, i16v1}},
+        {IPICK(is_128B, Intrinsic::hexagon_V6_vaslwv), u32v1, "shl.vuw.vuw", {u32v1, i32v1}},
+        {IPICK(is_128B, Intrinsic::hexagon_V6_vaslhv), i16v1, "shl.vh.vuh", {i16v1, i16v1}},
+        {IPICK(is_128B, Intrinsic::hexagon_V6_vaslwv), i32v1, "shl.vw.vuw", {i32v1, i32v1}},
 
         {IPICK(is_128B, Intrinsic::hexagon_V6_vlsrh), u16v1, "shr.vuh.uh", {u16v1, u16}},
         {IPICK(is_128B, Intrinsic::hexagon_V6_vlsrw), u32v1, "shr.vuw.uw", {u32v1, u32}},
@@ -1733,6 +1733,12 @@ void CodeGen_Hexagon::visit(const Call *op) {
             internal_assert(op->args.size() == 2);
             string instr = op->is_intrinsic(Call::shift_left) ? "halide.hexagon.shl" : "halide.hexagon.shr";
             Expr b = maybe_scalar(op->args[1]);
+            if (isa_version < 62) {
+              if (b.type().is_int()) {
+                CodeGen_Posix::visit(op);
+                return;
+              }
+            }
             value = call_intrin(op->type,
                                 instr + type_suffix(op->args[0], b),
                                 {op->args[0], b});
